@@ -53,7 +53,7 @@ def create_app(test_config=None):
         logging.getLogger("raspiCamSrv.webcam"),
         logging.getLogger("raspiCamSrv.sun"),
     ):
-        logger.setLevel(logging.ERROR)
+        logger.setLevel(logging.DEBUG)
 
     #>>>>> Uncomment the following line in order to log to the log file
     #app.logger.addHandler(filehandler)
