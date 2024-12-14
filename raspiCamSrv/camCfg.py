@@ -788,7 +788,7 @@ class TriggerConfig():
     def checkPostHook(self) -> str:
         host = self.notifyHost
         port = self.notifyPort
-        url = f"http://{host}:{port}"
+        url = f"http://{host}:{port}/motion_detected"
 
         try:
             response = requests.post(url, timeout=5)

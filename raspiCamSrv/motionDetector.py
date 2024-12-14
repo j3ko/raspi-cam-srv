@@ -469,7 +469,7 @@ class MotionDetector():
         try:
             host = tc.notifyHost
             port = tc.notifyPort
-            url = f"http://{host}:{port}"
+            url = f"http://{host}:{port}/motion_detected"
             response = requests.post(url, json=msg, timeout=5)
             response.raise_for_status()
             return None
