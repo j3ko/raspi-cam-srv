@@ -640,10 +640,10 @@ class MotionDetector():
                                 count = 0
                                 startTime = datetime.now()
                         if motion:
-                            #logger.debug("Thread %s: MotionDetector._motionThread - motion detected", get_ident())
+                            logger.debug("Thread %s: MotionDetector._motionThread - motion detected", get_ident())
                             cls._doAction(trigger)
                         cls._stopAction()
-                        #logger.debug("Thread %s: MotionDetector._motionThread - stopAction done", get_ident())
+                        logger.debug("Thread %s: MotionDetector._motionThread - stopAction done", get_ident())
                         if tc.motionDetectAlgo > 1 \
                         and tc.videoBboxes == True:
                             if not cls.videoStart is None \
@@ -744,6 +744,7 @@ class MotionDetector():
                 cnt += 1
                 if cnt > 500:
                     logger.error("Motion detection thread did not stop within 5 sec")
+                    cls._stopAction(force=True)
                     if cls.mThread.is_alive():
                         cnt = 0
                     else:
