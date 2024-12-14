@@ -366,7 +366,6 @@ def notify():
     return render_template("trigger/trigger.html", tc=tc, sc=sc)
 
 @bp.route("/start_triggered_capture", methods=("GET", "POST"))
-@login_required
 def start_triggered_capture():
     logger.debug("In start_triggered_capture")
     cfg = CameraCfg()
@@ -404,7 +403,6 @@ def start_triggered_capture():
     return render_template("trigger/trigger.html", tc=tc, sc=sc)
 
 @bp.route("/stop_triggered_capture", methods=("GET", "POST"))
-@login_required
 def stop_triggered_capture():
     logger.debug("In stop_triggered_capture")
     cfg = CameraCfg()
