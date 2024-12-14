@@ -12,6 +12,7 @@ import smtplib
 from email.message import EmailMessage
 import mimetypes
 import copy
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -349,7 +350,7 @@ class MotionDetector():
                     (cls.eventKey, logTS, logTS[:10], logTS[11:19], "Photo", 0, fnPhoto, tc.actionPath + "/" + fnPhoto)
                 )
                 cls.db.commit()
-                #logger.debug("Thread %s: MotionDetector._doAction - DB committed", get_ident())
+                logger.debug("Thread %s: MotionDetector._doAction - DB committed", get_ident())
                 if not cls.notifyMail is None:
                     if tc.notifyIncludePhoto == True:
                         cls._attachToNotification(cls.notifyMail, fnPhoto)
@@ -375,62 +376,106 @@ class MotionDetector():
             and tc.actionPhotoBurst <= 1)):
                 cls._sendNotification()
     
-    @staticmethod            
-    def _initNotificationMessage(logTS, trigger) -> EmailMessage:
-        """ Set up an eMail Message for notification
+    # @staticmethod            
+    # def _initNotificationMessage(logTS, trigger) -> EmailMessage:
+    #     """ Set up an eMail Message for notification
+    #     """
+    #     logger.debug("Thread %s: MotionDetector._initNotificationMessage", get_ident())
+    #     msg = EmailMessage()
+    #     tc = CameraCfg().triggerConfig
+    #     msg["From"] = tc.notifyFrom
+    #     msg["To"] = tc.notifyTo
+    #     msg["Subject"] = tc.notifySubject
+    #     msg.set_content(
+    #         "Notification on an event\n\n" \
+    #         "Time   : " + logTS + "\n" \
+    #         "Trigger: " + trigger["trigger"] + "\n" \
+    #         "Type   : " + trigger["triggertype"] + "\n" \
+    #         "MSD    : " + str(trigger["triggerparam"])
+    #     )
+    #     logger.debug("Thread %s: MotionDetector._initNotificationMessage - done", get_ident())
+    #     return msg
+    
+    @staticmethod
+    def _initNotificationMessage(logTS: str, trigger) -> any:
+        """
+        Set up a JSON object for notification.
         """
         logger.debug("Thread %s: MotionDetector._initNotificationMessage", get_ident())
-        msg = EmailMessage()
-        tc = CameraCfg().triggerConfig
-        msg["From"] = tc.notifyFrom
-        msg["To"] = tc.notifyTo
-        msg["Subject"] = tc.notifySubject
-        msg.set_content(
-            "Notification on an event\n\n" \
-            "Time   : " + logTS + "\n" \
-            "Trigger: " + trigger["trigger"] + "\n" \
-            "Type   : " + trigger["triggertype"] + "\n" \
-            "MSD    : " + str(trigger["triggerparam"])
-        )
+        
+        # Create the JSON payload
+        notification = {
+            "timestamp": logTS,
+            "trigger": {
+                "type": trigger["trigger"],
+                "source": trigger["triggertype"],
+                "parameters": str(trigger["triggerparam"]),
+            }
+        }
+        
         logger.debug("Thread %s: MotionDetector._initNotificationMessage - done", get_ident())
-        return msg
+        return notification
     
+
     @staticmethod            
     def _attachToNotification(msg, fn):
         """ Attach a photo to a notification mail
         """
         logger.debug("Thread %s: MotionDetector._attachToNotification - fn: %s", get_ident(), fn)
-        tc = CameraCfg().triggerConfig
-        img = tc.actionPath + "/" + fn
-        ctype, encoding = mimetypes.guess_type(img)
-        if ctype is None or encoding is not None:
-            ctype = 'application/octet-stream'
-        maintype, subtype = ctype.split('/', 1)
-        with open(img, 'rb') as fp:
-            msg.add_attachment(fp.read(),
-                                maintype=maintype,
-                                subtype=subtype,
-                                filename=fn)
+        # tc = CameraCfg().triggerConfig
+        # img = tc.actionPath + "/" + fn
+        # ctype, encoding = mimetypes.guess_type(img)
+        # if ctype is None or encoding is not None:
+        #     ctype = 'application/octet-stream'
+        # maintype, subtype = ctype.split('/', 1)
+        # with open(img, 'rb') as fp:
+        #     msg.add_attachment(fp.read(),
+        #                         maintype=maintype,
+        #                         subtype=subtype,
+        #                         filename=fn)
         logger.debug("Thread %s: MotionDetector._attachToNotification - done", get_ident())
                     
+    # @classmethod
+    # def _sendNotificationThread(cls):
+    #     """ Send notification mail in own thread
+    #     """
+    #     logger.debug("Thread %s: MotionDetector._sendNotificationThread", get_ident())
+    #     tc = CameraCfg().triggerConfig
+    #     scr =CameraCfg().secrets
+    #     msg = cls.notifyBuffer.pop(0)
+    #     try:
+    #         if tc.notifyUseSSL == True:
+    #             server = smtplib.SMTP_SSL(host=tc.notifyHost, port=tc.notifyPort)
+    #         else:
+    #             server = smtplib.SMTP(host=tc.notifyHost, port=tc.notifyPort)
+    #         server.connect(tc.notifyHost)
+    #         server.login(scr.notifyUser, scr.notifyPwd)
+    #         server.ehlo()
+    #         server.send_message(msg)
+    #         server.quit()
+    #     except Exception as e:
+    #         tc.error = "Error sending notification mail: " + str(e)
+    #         tc.errorSource = "MotionDetector._sendNotificationThread"
+    #         logger.error("Error sending notification mail: %s", e)
+    #     logger.debug("Thread %s: MotionDetector._sendNotificationThread - done", get_ident())
+
     @classmethod
     def _sendNotificationThread(cls):
         """ Send notification mail in own thread
         """
         logger.debug("Thread %s: MotionDetector._sendNotificationThread", get_ident())
         tc = CameraCfg().triggerConfig
-        scr =CameraCfg().secrets
         msg = cls.notifyBuffer.pop(0)
         try:
-            if tc.notifyUseSSL == True:
-                server = smtplib.SMTP_SSL(host=tc.notifyHost, port=tc.notifyPort)
-            else:
-                server = smtplib.SMTP(host=tc.notifyHost, port=tc.notifyPort)
-            server.connect(tc.notifyHost)
-            server.login(scr.notifyUser, scr.notifyPwd)
-            server.ehlo()
-            server.send_message(msg)
-            server.quit()
+            host = tc.notifyHost
+            port = tc.notifyPort
+            url = f"http://{host}:{port}"
+            response = requests.post(url, json=msg, timeout=5)
+            response.raise_for_status()
+            return None
+        except requests.RequestException as e:
+            print(f"Error occurred during POST request: {e}")
+            return "error"
         except Exception as e:
             tc.error = "Error sending notification mail: " + str(e)
             tc.errorSource = "MotionDetector._sendNotificationThread"
@@ -448,7 +493,9 @@ class MotionDetector():
         thread.start()
         cls.notifyMail = None
         logger.debug("Thread %s: MotionDetector._sendNotification - done", get_ident())
-                    
+
+    
+
     @classmethod
     def _cleanupEvent(cls):
         """ Cleanup event data

@@ -15,6 +15,7 @@ import smtplib
 from flask import g
 from pathlib import Path
 import zoneinfo
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -783,132 +784,145 @@ class TriggerConfig():
         db.execute("DELETE FROM events WHERE date <= ?", (dateRem,)).fetchall()
         db.commit()
         logger.debug("Removed old events")
-        
-    def checkNotificationRecipient(self, user=None, pwd=None) -> tuple:
-        """ Check login to mail server using available credentials
 
-            Return (user, password, error message)
-        """
-        logger.debug("TriggerConfig.checkNotificationRecipient")
-        err = ""
-        secHost = ""
-        secPort = -1
-        secUseSSL = None
-        secUser = ""
-        secPwd = ""
-        secretsOK = False
-        # Try to get credentials from the file
-        if os.path.exists(self.notifyPwdPath):
-            with open(self.notifyPwdPath) as f:
-                try:
-                    secrets = json.load(f)
-                    notifySecrets = secrets["eventnotification"]
-                    secHost = notifySecrets["host"]
-                    secPort = notifySecrets["port"]
-                    secUseSSL = notifySecrets["useSSL"]
-                    secUser = notifySecrets["user"]
-                    secPwd = notifySecrets["password"]
-                    secretsOK = True
-                    logger.debug("TriggerConfig.checkNotificationRecipient - read credentials from file")
-                except Exception as e:
-                    pass
-        if secHost == "":
-            secHost = self.notifyHost
-        else:
-            if secHost != self.notifyHost:
-                secHost = self.notifyHost
-                secretsOK = False
-        if secPort == -1:
-            secPort = self.notifyPort
-        else:
-            if secPort != self.notifyPort:
-                secPort = self.notifyPort
-                secretsOK = False
-        if secUseSSL is None:
-            secUseSSL = self.notifyUseSSL
-        else:
-            if secUseSSL != self.notifyUseSSL:
-                secUseSSL = self.notifyUseSSL
-                secretsOK = False
-        if secUser == "":
-            if not user is None:
-                secUser = user
-        else:
-            if not user is None:
-                if user != "":
-                    secUser = user
-                    secretsOK = False
-        if secPwd == "":
-            if not pwd is None:
-                secPwd = pwd
-        else:
-            if not pwd is None:
-                if pwd != "":
-                    secPwd = pwd
-                    secretsOK = False
-        
-        # Test connection
+    def checkPostHook(self) -> str:
+        host = self.notifyHost
+        port = self.notifyPort
+        url = f"http://{host}:{port}"
+
         try:
-            if secUseSSL == True:
-                server = smtplib.SMTP_SSL(host=secHost, port=secPort)
-            else:
-                server = smtplib.SMTP(host=secHost, port=secPort)
-            server.connect(secHost)
-            server.login(secUser, secPwd)
-            server.ehlo()
-            server.quit()
-            logger.debug("TriggerConfig.checkNotificationRecipient - connection test successful")
-        except Exception as e:
-            logger.debug("TriggerConfig.checkNotificationRecipient - connection test failed")
-            self.notifyConOK = False
-            err = "Connection error: " + str(e)
+            response = requests.post(url, timeout=5)
+            response.raise_for_status()
+            return None
+        except requests.RequestException as e:
+            print(f"Error occurred during POST request: {e}")
+            return "error"
+
+    # def checkNotificationRecipient(self, user=None, pwd=None) -> tuple:
+    #     """ Check login to mail server using available credentials
+
+    #         Return (user, password, error message)
+    #     """
+    #     logger.debug("TriggerConfig.checkNotificationRecipient")
+    #     err = ""
+    #     secHost = ""
+    #     secPort = -1
+    #     secUseSSL = None
+    #     secUser = ""
+    #     secPwd = ""
+    #     secretsOK = False
+    #     # Try to get credentials from the file
+    #     if os.path.exists(self.notifyPwdPath):
+    #         with open(self.notifyPwdPath) as f:
+    #             try:
+    #                 secrets = json.load(f)
+    #                 notifySecrets = secrets["eventnotification"]
+    #                 secHost = notifySecrets["host"]
+    #                 secPort = notifySecrets["port"]
+    #                 secUseSSL = notifySecrets["useSSL"]
+    #                 secUser = notifySecrets["user"]
+    #                 secPwd = notifySecrets["password"]
+    #                 secretsOK = True
+    #                 logger.debug("TriggerConfig.checkNotificationRecipient - read credentials from file")
+    #             except Exception as e:
+    #                 pass
+    #     if secHost == "":
+    #         secHost = self.notifyHost
+    #     else:
+    #         if secHost != self.notifyHost:
+    #             secHost = self.notifyHost
+    #             secretsOK = False
+    #     if secPort == -1:
+    #         secPort = self.notifyPort
+    #     else:
+    #         if secPort != self.notifyPort:
+    #             secPort = self.notifyPort
+    #             secretsOK = False
+    #     if secUseSSL is None:
+    #         secUseSSL = self.notifyUseSSL
+    #     else:
+    #         if secUseSSL != self.notifyUseSSL:
+    #             secUseSSL = self.notifyUseSSL
+    #             secretsOK = False
+    #     if secUser == "":
+    #         if not user is None:
+    #             secUser = user
+    #     else:
+    #         if not user is None:
+    #             if user != "":
+    #                 secUser = user
+    #                 secretsOK = False
+    #     if secPwd == "":
+    #         if not pwd is None:
+    #             secPwd = pwd
+    #     else:
+    #         if not pwd is None:
+    #             if pwd != "":
+    #                 secPwd = pwd
+    #                 secretsOK = False
+        
+    #     # Test connection
+    #     try:
+    #         if secUseSSL == True:
+    #             server = smtplib.SMTP_SSL(host=secHost, port=secPort)
+    #         else:
+    #             server = smtplib.SMTP(host=secHost, port=secPort)
+    #         server.connect(secHost)
+    #         server.login(secUser, secPwd)
+    #         server.ehlo()
+    #         server.quit()
+    #         logger.debug("TriggerConfig.checkNotificationRecipient - connection test successful")
+    #     except Exception as e:
+    #         logger.debug("TriggerConfig.checkNotificationRecipient - connection test failed")
+    #         self.notifyConOK = False
+    #         err = "Connection error: " + str(e)
             
-        if err == "":
-            self.notifyConOK = True
-            if secretsOK == False:
-                if self.notifySavePwd == True:
-                    # Store credentials
-                    if self.notifyPwdPath == "":
-                        err = "Please enter the file path for storage of credentials!"
-                    else:
-                        if not os.path.exists(self.notifyPwdPath):
-                            fp = Path(self.notifyPwdPath)
-                            dir = fp.parent.absolute()
-                            fn = fp.name
-                            if not os.path.exists(dir):
-                                os.makedirs(dir, exist_ok=True)
-                            self.notifyPwdPath = str(dir) + "/" + fn
-                            Path(self.notifyPwdPath).touch(exist_ok=True)
-                        else:
-                            if os.path.isdir(self.notifyPwdPath):
-                                err = "The 'Password File Path' must be a file and not a directory!"
-                        secrets = {}
-                        if err == "":
-                            if os.stat(self.notifyPwdPath).st_size > 0:
-                                with open(self.notifyPwdPath, "r") as f:
-                                    try:
-                                        secrets = json.load(f)
-                                    except Exception as e:
-                                        err = "The file specified as 'Password File Path' has content which is not in JSON format"
-                        if err == "":
-                            if "eventnotification" in secrets:
-                                notifySecrets = secrets["eventnotification"]
-                            else:
-                                notifySecrets = {}
-                                secrets["eventnotification"] = notifySecrets
-                            notifySecrets["host"] = self.notifyHost
-                            notifySecrets["port"] = self.notifyPort
-                            notifySecrets["useSSL"] = self.notifyUseSSL
-                            notifySecrets["user"] = secUser
-                            notifySecrets["password"] = secPwd
-                            with open(self.notifyPwdPath, "w") as f:
-                                try:
-                                    json.dump(secrets,fp=f, indent=4)
-                                    logger.debug("TriggerConfig.checkNotificationRecipient - saved credentials to file %s", self.notifyPwdPath)
-                                except Exception as e:
-                                    logger.err("TriggerConfig.checkNotificationRecipient - error while saving credentials to file %s: %s", self.notifyPwdPath, e)
-                                    err = "Error writing to " + self.notifyPwdPath + ": " + str(e)
-        return (secUser, secPwd, err)
+    #     if err == "":
+    #         self.notifyConOK = True
+    #         if secretsOK == False:
+    #             if self.notifySavePwd == True:
+    #                 # Store credentials
+    #                 if self.notifyPwdPath == "":
+    #                     err = "Please enter the file path for storage of credentials!"
+    #                 else:
+    #                     if not os.path.exists(self.notifyPwdPath):
+    #                         fp = Path(self.notifyPwdPath)
+    #                         dir = fp.parent.absolute()
+    #                         fn = fp.name
+    #                         if not os.path.exists(dir):
+    #                             os.makedirs(dir, exist_ok=True)
+    #                         self.notifyPwdPath = str(dir) + "/" + fn
+    #                         Path(self.notifyPwdPath).touch(exist_ok=True)
+    #                     else:
+    #                         if os.path.isdir(self.notifyPwdPath):
+    #                             err = "The 'Password File Path' must be a file and not a directory!"
+    #                     secrets = {}
+    #                     if err == "":
+    #                         if os.stat(self.notifyPwdPath).st_size > 0:
+    #                             with open(self.notifyPwdPath, "r") as f:
+    #                                 try:
+    #                                     secrets = json.load(f)
+    #                                 except Exception as e:
+    #                                     err = "The file specified as 'Password File Path' has content which is not in JSON format"
+    #                     if err == "":
+    #                         if "eventnotification" in secrets:
+    #                             notifySecrets = secrets["eventnotification"]
+    #                         else:
+    #                             notifySecrets = {}
+    #                             secrets["eventnotification"] = notifySecrets
+    #                         notifySecrets["host"] = self.notifyHost
+    #                         notifySecrets["port"] = self.notifyPort
+    #                         notifySecrets["useSSL"] = self.notifyUseSSL
+    #                         notifySecrets["user"] = secUser
+    #                         notifySecrets["password"] = secPwd
+    #                         with open(self.notifyPwdPath, "w") as f:
+    #                             try:
+    #                                 json.dump(secrets,fp=f, indent=4)
+    #                                 logger.debug("TriggerConfig.checkNotificationRecipient - saved credentials to file %s", self.notifyPwdPath)
+    #                             except Exception as e:
+    #                                 logger.err("TriggerConfig.checkNotificationRecipient - error while saving credentials to file %s: %s", self.notifyPwdPath, e)
+    #                                 err = "Error writing to " + self.notifyPwdPath + ": " + str(e)
+    #     return (secUser, secPwd, err)
 
     @classmethod                
     def initFromDict(cls, dict:dict):
