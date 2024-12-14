@@ -793,7 +793,7 @@ class TriggerConfig():
         try:
             response = requests.post(url, timeout=5)
             response.raise_for_status()
-            return None
+            return ""
         except requests.RequestException as e:
             print(f"Error occurred during POST request: {e}")
             return "error"
