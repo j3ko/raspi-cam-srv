@@ -3934,10 +3934,10 @@ class CameraCfg():
                 self.triggerConfig = self._loadConfigCl(TriggerConfig, "triggerConfig.json", cfgPath)
                 self.streamingCfg = self._initStreamingConfigFromDisc("streamingCfg.json", cfgPath)
                 tc = self.triggerConfig
-                (usr, pwd, err) = tc.checkNotificationRecipient()
-                if tc.notifyConOK == True:
-                    sc = self.secrets
-                    sc.notifyUser = usr
-                    sc.notifyPwd = pwd
+                # (usr, pwd, err) = tc.checkNotificationRecipient()
+                # if tc.notifyConOK == True:
+                #     sc = self.secrets
+                #     sc.notifyUser = usr
+                #     sc.notifyPwd = pwd
                 
                 

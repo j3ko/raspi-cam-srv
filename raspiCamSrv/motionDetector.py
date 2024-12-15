@@ -744,7 +744,6 @@ class MotionDetector():
                 cnt += 1
                 if cnt > 500:
                     logger.error("Motion detection thread did not stop within 5 sec")
-                    cls._stopAction(force=True)
                     if cls.mThread.is_alive():
                         cnt = 0
                     else:
